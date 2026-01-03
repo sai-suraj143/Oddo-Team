@@ -2,19 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, LogIn, LogOut, Calendar as CalIcon } from 'lucide-react';
 
 interface AttendanceTrackerProps {
+    userId: string;
     isCheckedIn: boolean;
     checkInTime: string | null;
     onToggle: () => void;
 }
 
-export const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({ isCheckedIn, checkInTime, onToggle }) => {
+export const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({ userId, isCheckedIn, checkInTime, onToggle }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [history, setHistory] = useState<any[]>([]);
 
     // Update clock every second
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Fetch History
+    useEffect(() => {
+        if (!userId) return;
+        const fetchHistory = async () => {
+            try {
+                const res = await fetch(`/api/attendance/history/${userId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setHistory(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch history", err);
+            }
+        };
+        fetchHistory();
+    }, [userId, isCheckedIn]); // Re-fetch when check-in status changes
 
     const handleAction = () => {
         onToggle();
@@ -53,7 +72,7 @@ export const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({ isCheckedI
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                     <h3 className="font-bold text-gray-800 flex items-center gap-2"><CalIcon size={18} /> Weekly View</h3>
-                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">Last 7 Days</span>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">Recent</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -66,9 +85,21 @@ export const AttendanceTracker: React.FC<AttendanceTrackerProps> = ({ isCheckedI
                             </tr>
                         </thead>
                         <tbody className="text-sm divide-y divide-gray-50">
-                            <AttendanceRow date="Oct 24, 2023" in="09:00 AM" out="05:30 PM" status="Present" />
-                            <AttendanceRow date="Oct 23, 2023" in="09:15 AM" out="01:00 PM" status="Half-day" />
-                            <AttendanceRow date="Oct 22, 2023" in="---" out="---" status="Leave" />
+                            {history.length > 0 ? (
+                                history.map((record: any, index: number) => (
+                                    <AttendanceRow
+                                        key={index}
+                                        date={record.date}
+                                        in={record.checkIn || '---'}
+                                        out={record.checkOut || '---'}
+                                        status={record.status}
+                                    />
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No records found.</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -91,7 +122,7 @@ const AttendanceRow = ({ date, in: checkIn, out, status }: any) => {
             <td className="px-6 py-4 text-gray-500">{checkIn}</td>
             <td className="px-6 py-4 text-gray-500">{out}</td>
             <td className="px-6 py-4">
-                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${statusColors[status]}`}>
+                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${statusColors[status] || 'bg-gray-100 text-gray-600'}`}>
                     {status}
                 </span>
             </td>

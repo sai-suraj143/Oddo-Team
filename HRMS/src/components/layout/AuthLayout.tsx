@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard } from 'lucide-react';
+
 
 interface AuthLayoutProps {
     children: React.ReactNode;
@@ -18,8 +18,8 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
             </div>
             <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-8">
-                    <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm"><LayoutDashboard size={28} /></div>
-                    <span className="text-2xl font-bold tracking-tight">Odoo</span>
+                    <img src="/OdooLogo.png" alt="Odoo Logo" className="h-20 w-auto  p-1 rounded-lg backdrop-blur-sm" />
+                    {/* <span className="text-2xl font-bold tracking-tight">Odoo</span> */}
                 </div>
                 <h1 className="text-5xl font-bold mb-6 leading-tight">Manage your workforce with <br /><span className="text-indigo-200">confidence.</span></h1>
             </div>

@@ -3,7 +3,8 @@ export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-
 export const EMP_ID_REGEX = /^OI[A-Z]{4}\d{8}$/;
 
 export interface UserType {
-  id: string;
+  id: string; // Employee ID
+  _id?: string; // MongoDB Access Class
   name: string;
   email: string;
   password?: string;

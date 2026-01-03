@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-    LayoutDashboard,
     Calendar,
     LogOut,
-    Bell,
     CheckCircle,
     Briefcase,
     User,
@@ -17,6 +15,9 @@ import type { SubViewType } from '../../App';
 // Import your components
 import { ProfileView } from '../profile/ProfileView';
 import { AttendanceTracker } from '../attendance/AttendanceTracker';
+import { LeaveApplication } from '../leave/LeaveApplication';
+import { PayrollView } from '../payroll/PayrollView';
+import { DollarSign } from 'lucide-react'; // Add DollarSign for icon
 
 interface StatCardProps {
     title: string;
@@ -28,7 +29,7 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-lg ${color.split(' ')[0]} bg-opacity-10`}>
+            <div className={`p - 3 rounded - lg ${color.split(' ')[0]} bg - opacity - 10`}>
                 <Icon size={24} className={color.split(' ')[1]} />
             </div>
         </div>
@@ -49,32 +50,73 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
     const [attendanceStatus, setAttendanceStatus] = useState<'Absent' | 'Present'>('Absent');
     const [checkInTime, setCheckInTime] = useState<string | null>(null);
 
-    // Function to handle Check-In (Connect this to your MongoDB API later)
+    // Fetch initial status
+    useEffect(() => {
+        const fetchStatus = async () => {
+            if (!user._id) return;
+            try {
+                const res = await fetch(`/api/attendance/today/${user._id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'Present') {
+                        setAttendanceStatus('Present');
+                        setCheckInTime(data.checkIn);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching attendance status", err);
+            }
+        };
+        fetchStatus();
+    }, [user._id]);
+
     const handleCheckInToggle = async () => {
-        if (attendanceStatus === 'Absent') {
-            // Logic for POST /api/attendance/check-in
-            setAttendanceStatus('Present');
-            setCheckInTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        } else {
-            // Logic for PATCH /api/attendance/check-out
-            setAttendanceStatus('Absent');
-            setCheckInTime(null);
+        if (!user._id) {
+            alert("User ID missing. Please re-login.");
+            return;
+        }
+
+        try {
+            if (attendanceStatus === 'Absent') {
+                const res = await fetch('/api/attendance/check-in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user._id })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setAttendanceStatus('Present');
+                    setCheckInTime(data.checkIn);
+                }
+            } else {
+                const res = await fetch('/api/attendance/check-out', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user._id })
+                });
+                if (res.ok) {
+                    setAttendanceStatus('Absent');
+                    setCheckInTime(null);
+                }
+            }
+        } catch (err) {
+            console.error("Attendance action failed", err);
         }
     };
 
     const navItemClasses = (isActive: boolean) =>
-        `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full mb-1 ${isActive
+        `flex items - center gap - 3 px - 4 py - 3 rounded - xl transition - all duration - 200 w - full mb - 1 ${isActive
             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
             : 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
-        }`;
+        } `;
 
     return (
         <div className="flex h-screen bg-gray-50">
             {/* Sidebar */}
             <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col p-6">
                 <div className="flex items-center gap-2 mb-10 text-indigo-600">
-                    <LayoutDashboard size={28} />
-                    <span className="text-xl font-bold">NexusPortal</span>
+                    <img src="/OdooLogo.png" alt="Odoo Logo" className="h-14 w-auto" />
+                    {/* <span className="text-xl font-bold">Odoo</span> */}
                 </div>
 
                 <nav className="flex-1">
@@ -86,6 +128,12 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                     </button>
                     <button onClick={() => setSubView('attendance')} className={navItemClasses(subView === 'attendance')}>
                         <Clock size={20} /> <span className="font-medium">Attendance</span>
+                    </button>
+                    <button onClick={() => setSubView('leave')} className={navItemClasses(subView === 'leave')}>
+                        <Calendar size={20} /> <span className="font-medium">Leave & Time Off</span>
+                    </button>
+                    <button onClick={() => setSubView('payroll')} className={navItemClasses(subView === 'payroll')}>
+                        <DollarSign size={20} /> <span className="font-medium">Payroll</span>
                     </button>
                 </nav>
 
@@ -110,7 +158,7 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                 <header className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            {subView === 'home' && `Welcome back, ${user.name.split(' ')[0]}! 👋`}
+                            {subView === 'home' && `Welcome back, ${user.name.split(' ')[0]} ! 👋`}
                             {subView === 'profile' && 'Profile Management'}
                             {subView === 'attendance' && 'Attendance Tracker'}
                         </h1>
@@ -119,10 +167,10 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                     {/* QUICK CHECK-IN BUTTON IN HEADER */}
                     <button
                         onClick={handleCheckInToggle}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all shadow-sm border ${attendanceStatus === 'Present'
+                        className={`flex items - center gap - 2 px - 4 py - 2 rounded - lg font - bold transition - all shadow - sm border ${attendanceStatus === 'Present'
                             ? 'bg-red-50 text-red-600 border-red-100'
                             : 'bg-green-50 text-green-600 border-green-100'
-                            }`}
+                            } `}
                     >
                         {attendanceStatus === 'Present' ? <LogOut size={18} /> : <CheckCircle size={18} />}
                         {attendanceStatus === 'Present' ? 'Check Out' : 'Check In'}
@@ -136,7 +184,7 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                                 {/* Value now reflects the dynamic state */}
                                 <StatCard
                                     title="Today's Status"
-                                    value={attendanceStatus === 'Present' ? `Present (${checkInTime})` : 'Not Marked'}
+                                    value={attendanceStatus === 'Present' ? `Present(${checkInTime})` : 'Not Marked'}
                                     icon={CheckCircle}
                                     color={attendanceStatus === 'Present' ? "bg-green-500 text-green-500" : "bg-gray-400 text-gray-400"}
                                 />
@@ -161,15 +209,19 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                         </>
                     )}
 
-                    {subView === 'profile' && <ProfileView userRole={user.role} />}
+                    {subView === 'profile' && <ProfileView userRole={user.role} userId={user._id || user.id} />}
 
                     {subView === 'attendance' && (
                         <AttendanceTracker
                             isCheckedIn={attendanceStatus === 'Present'}
                             checkInTime={checkInTime}
                             onToggle={handleCheckInToggle}
+                            userId={user._id || user.id}
                         />
                     )}
+
+                    {subView === 'leave' && <LeaveApplication userId={user._id || user.id} />}
+                    {subView === 'payroll' && <PayrollView userId={user._id || user.id} />}
                 </div>
             </main>
         </div>

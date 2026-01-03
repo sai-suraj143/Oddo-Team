@@ -3,13 +3,24 @@ const router = express.Router();
 const Profile = require('../models/Profile');
 const User = require('../models/User'); // Your friend's User model
 
+const { generateEmployeeId } = require('../utils/idGenerator');
+
 // 1. HR: Add New Employee [Requirement 3.2.2]
 router.post('/add-employee', async (req, res) => {
     try {
         const { name, email, role, department, designation, salary } = req.body;
 
+        // Generate Employee ID
+        const empId = generateEmployeeId(name);
+
         // First, create the Auth User (Friend's logic)
-        const newUser = await User.create({ name, email, role, password: 'InitialPassword123' });
+        const newUser = await User.create({
+            name,
+            email,
+            role,
+            empId,
+            password: 'InitialPassword123'
+        });
 
         // Second, create the linked Profile (Your logic)
         const newProfile = await Profile.create({

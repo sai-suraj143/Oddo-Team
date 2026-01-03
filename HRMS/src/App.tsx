@@ -7,7 +7,7 @@ import EmployeeDashboard from './features/dashboard/EmployeeDashboard';
 import type { UserType } from './utils/constants';
 
 // Define the available sub-views for your features
-export type SubViewType = 'home' | 'profile' | 'attendance';
+export type SubViewType = 'home' | 'profile' | 'attendance' | 'leave' | 'payroll';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'login' | 'signup' | 'dashboard'>('login');

@@ -2,12 +2,22 @@ import React from 'react';
 import { Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const AllAttendance: React.FC = () => {
-    // Mock data
-    const logs = [
-        { id: 1, name: "Alice Johnson", date: "Today", in: "09:00 AM", out: "---", status: "Present" },
-        { id: 2, name: "Bob Smith", date: "Today", in: "09:15 AM", out: "06:00 PM", status: "Present" },
-        { id: 3, name: "Charlie Brown", date: "Today", in: "---", out: "---", status: "Absent" },
-    ];
+    const [logs, setLogs] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        const fetchAttendance = async () => {
+            try {
+                const res = await fetch('/api/attendance/all-yesterday-today');
+                if (res.ok) {
+                    const data = await res.json();
+                    setLogs(data);
+                }
+            } catch (err) {
+                console.error("Error fetching attendance", err);
+            }
+        };
+        fetchAttendance();
+    }, []);
 
     return (
         <div className="overflow-x-auto">
@@ -24,9 +34,9 @@ const AllAttendance: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                     {logs.map((log) => (
-                        <tr key={log.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 font-medium text-gray-900">{log.name}</td>
-                            <td className="px-6 py-4 text-gray-500 font-mono">{log.in}</td>
+                        <tr key={log._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 font-medium text-gray-900">{log.userId?.name || 'Unknown'}</td>
+                            <td className="px-6 py-4 text-gray-500 font-mono">{log.checkIn || '--:--'}</td>
                             <td className="px-6 py-4">
                                 <span className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full w-fit ${log.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                     }`}>
@@ -36,6 +46,11 @@ const AllAttendance: React.FC = () => {
                             </td>
                         </tr>
                     ))}
+                    {logs.length === 0 && (
+                        <tr>
+                            <td colSpan={3} className="px-6 py-4 text-center text-gray-500">No attendance records for today.</td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
         </div>
