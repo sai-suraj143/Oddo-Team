@@ -81,40 +81,42 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
         }
 
         try {
-            if (attendanceStatus === 'Absent') {
-                // FIXED: URL endpoint removed hyphen to match backend
-                const res = await fetch('/api/attendance/checkin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user._id })
-                });
-                const data = await res.json();
+            const endpoint = attendanceStatus === 'Absent' ? '/api/attendance/checkin' : '/api/attendance/checkout';
+            console.log(`Sending request to ${endpoint}`);
 
-                if (res.ok) {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user._id })
+            });
+
+            console.log("Response status:", res.status);
+
+            // Try to parse JSON, but handle if it fails (e.g. 404 HTML)
+            let data;
+            try {
+                const text = await res.text();
+                data = text ? JSON.parse(text) : {};
+            } catch (e) {
+                console.error("Failed to parse response JSON", e);
+                alert(`Server error (${res.status}): The server returned an invalid response. Please restart the backend.`);
+                return;
+            }
+
+            if (res.ok) {
+                if (attendanceStatus === 'Absent') {
                     setAttendanceStatus('Present');
-                    setCheckInTime(data.checkIn); // Use client time for immediate feedback or data.checkIn
+                    setCheckInTime(data.checkIn);
                 } else {
-                    alert(`Check-in failed: ${data.message}`);
-                }
-            } else {
-                // FIXED: URL endpoint removed hyphen to match backend
-                const res = await fetch('/api/attendance/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user._id })
-                });
-                const data = await res.json();
-
-                if (res.ok) {
                     setAttendanceStatus('Absent');
                     setCheckInTime(null);
-                } else {
-                    alert(`Check-out failed: ${data.message}`);
                 }
+            } else {
+                alert(`Request failed: ${data.message || res.statusText}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Attendance action failed", err);
-            alert("Network error during attendance.");
+            alert(`Network error: ${err.message}. Is the server running?`);
         }
     };
 
