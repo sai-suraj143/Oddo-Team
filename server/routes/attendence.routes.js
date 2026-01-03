@@ -2,90 +2,83 @@ const express = require('express');
 const router = express.Router();
 const Attendance = require('../models/Attendance');
 
-// Helper to get today's date string (YYYY-MM-DD)
-const getTodayDate = () => new Date().toISOString().split('T')[0];
-
-// GET: Check status for today
-router.get('/today/:userId', async (req, res) => {
-    try {
-        const today = getTodayDate();
-        const attendance = await Attendance.findOne({
-            userId: req.params.userId,
-            date: today
-        });
-        res.json(attendance || { status: 'Absent' });
-    } catch (err) {
-        res.status(500).json({ message: "Error fetching attendance" });
-    }
-});
-
-// GET: All Attendance (Admin)
-router.get('/all-yesterday-today', async (req, res) => {
-    try {
-        const today = getTodayDate();
-        // Fetch all attendance for today
-        const attendance = await Attendance.find({ date: today }).populate('userId', 'name empId role department');
-        res.json(attendance);
-    } catch (err) {
-        res.status(500).json({ message: "Error fetching all attendance" });
-    }
-});
-
-
-// POST: Check In
-router.post('/check-in', async (req, res) => {
+// 1. CHECK-IN
+router.post('/checkin', async (req, res) => {
     const { userId } = req.body;
-    const today = getTodayDate();
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Use local date for consistency
+    const d = new Date();
+    const offset = d.getTimezoneOffset() * 60000;
+    const date = (new Date(d - offset)).toISOString().slice(0, 10);
+    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     try {
-        let attendance = await Attendance.findOne({ userId, date: today });
-        if (attendance) {
-            return res.status(400).json({ message: "Already checked in today" });
-        }
+        let attendance = await Attendance.findOne({ userId, date });
+        if (attendance) return res.status(400).json({ message: 'Already checked in' });
 
-        attendance = new Attendance({
+        attendance = await Attendance.create({
             userId,
-            date: today,
+            date,
             checkIn: time,
             status: 'Present'
         });
-
-        await attendance.save();
         res.json(attendance);
-    } catch (err) {
-        res.status(500).json({ message: "Check-in failed" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
-// POST: Check Out
-router.post('/check-out', async (req, res) => {
+// 2. CHECK-OUT
+router.post('/checkout', async (req, res) => {
     const { userId } = req.body;
-    const today = getTodayDate();
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = new Date();
+    const offset = d.getTimezoneOffset() * 60000;
+    const date = (new Date(d - offset)).toISOString().slice(0, 10);
+    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     try {
-        let attendance = await Attendance.findOne({ userId, date: today });
-        if (!attendance) {
-            return res.status(400).json({ message: "No check-in record found for today" });
-        }
+        const attendance = await Attendance.findOne({ userId, date });
+        if (!attendance) return res.status(400).json({ message: 'No check-in record found today' });
 
         attendance.checkOut = time;
-        // Logic for Half-day? optional
+        // Calculate work hours? (Simple diff not possible with time strings easily without ref, skipping for now or parsing)
+
         await attendance.save();
         res.json(attendance);
-    } catch (err) {
-        res.status(500).json({ message: "Check-out failed" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
-// GET: Attendance History
-router.get('/history/:userId', async (req, res) => {
+// 3. GET TODAY'S STATUS (New endpoint for Dashboard)
+router.get('/today/:userId', async (req, res) => {
     try {
-        const history = await Attendance.find({ userId: req.params.userId }).sort({ date: -1 });
-        res.json(history);
-    } catch (err) {
-        res.status(500).json({ message: "Error fetching history" });
+        const d = new Date();
+        const offset = d.getTimezoneOffset() * 60000;
+        const date = (new Date(d - offset)).toISOString().slice(0, 10);
+
+        const attendance = await Attendance.findOne({ userId: req.params.userId, date });
+
+        if (attendance) {
+            res.json({
+                status: attendance.status,
+                checkIn: attendance.checkIn,
+                checkOut: attendance.checkOut
+            });
+        } else {
+            res.json({ status: 'Absent', checkIn: null });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 4. GET ALL HISTORY
+router.get('/:userId', async (req, res) => {
+    try {
+        const attendance = await Attendance.find({ userId: req.params.userId }).sort({ date: -1 });
+        res.json(attendance);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 

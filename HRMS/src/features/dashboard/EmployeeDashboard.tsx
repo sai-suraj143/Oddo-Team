@@ -7,17 +7,17 @@ import {
     User,
     Clock,
     Home,
+    DollarSign,
     type LucideIcon
 } from 'lucide-react';
 import type { UserType } from '../../utils/constants';
 import type { SubViewType } from '../../App';
 
-// Import your components
+// Import your components (Ensure these paths match your project structure)
 import { ProfileView } from '../profile/ProfileView';
-import { AttendanceTracker } from '../attendance/AttendanceTracker';
-import { LeaveApplication } from '../leave/LeaveApplication';
-import { PayrollView } from '../payroll/PayrollView';
-import { DollarSign } from 'lucide-react'; // Add DollarSign for icon
+import { AttendanceTracker } from '../attendance/AttendanceTracker'; // Check if this is a default or named export in your file
+import { LeaveApplication } from '../leave/LeaveApplication'; // Placeholder if not yet created
+import { PayrollView } from '../payroll/PayrollView'; // Placeholder if not yet created
 
 interface StatCardProps {
     title: string;
@@ -29,7 +29,7 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
-            <div className={`p - 3 rounded - lg ${color.split(' ')[0]} bg - opacity - 10`}>
+            <div className={`p-3 rounded-lg ${color.split(' ')[0]} bg-opacity-10`}>
                 <Icon size={24} className={color.split(' ')[1]} />
             </div>
         </div>
@@ -55,12 +55,16 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
         const fetchStatus = async () => {
             if (!user._id) return;
             try {
+                // This route needs to exist in your backend (see Step 2 below)
                 const res = await fetch(`/api/attendance/today/${user._id}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.status === 'Present') {
                         setAttendanceStatus('Present');
                         setCheckInTime(data.checkIn);
+                    } else {
+                        setAttendanceStatus('Absent');
+                        setCheckInTime(null);
                     }
                 }
             } catch (err) {
@@ -78,45 +82,56 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
 
         try {
             if (attendanceStatus === 'Absent') {
-                const res = await fetch('/api/attendance/check-in', {
+                // FIXED: URL endpoint removed hyphen to match backend
+                const res = await fetch('/api/attendance/checkin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user._id })
                 });
+                const data = await res.json();
+
                 if (res.ok) {
-                    const data = await res.json();
                     setAttendanceStatus('Present');
-                    setCheckInTime(data.checkIn);
+                    setCheckInTime(data.checkIn); // Use client time for immediate feedback or data.checkIn
+                } else {
+                    alert(`Check-in failed: ${data.message}`);
                 }
             } else {
-                const res = await fetch('/api/attendance/check-out', {
+                // FIXED: URL endpoint removed hyphen to match backend
+                const res = await fetch('/api/attendance/checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user._id })
                 });
+                const data = await res.json();
+
                 if (res.ok) {
                     setAttendanceStatus('Absent');
                     setCheckInTime(null);
+                } else {
+                    alert(`Check-out failed: ${data.message}`);
                 }
             }
         } catch (err) {
             console.error("Attendance action failed", err);
+            alert("Network error during attendance.");
         }
     };
 
+    // FIXED: Removed extra spaces in class string
     const navItemClasses = (isActive: boolean) =>
-        `flex items - center gap - 3 px - 4 py - 3 rounded - xl transition - all duration - 200 w - full mb - 1 ${isActive
+        `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full mb-1 ${isActive
             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
             : 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-600'
-        } `;
+        }`;
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
             {/* Sidebar */}
             <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col p-6">
                 <div className="flex items-center gap-2 mb-10 text-indigo-600">
+                    {/* Ensure this image exists in your public folder */}
                     <img src="/OdooLogo.png" alt="Odoo Logo" className="h-14 w-auto" />
-                    {/* <span className="text-xl font-bold">Odoo</span> */}
                 </div>
 
                 <nav className="flex-1">
@@ -140,7 +155,7 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                 <div className="mt-auto pt-6 border-t border-gray-100">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                            {user.name.charAt(0)}
+                            {user.name ? user.name.charAt(0) : 'U'}
                         </div>
                         <div className="overflow-hidden">
                             <p className="text-sm font-medium truncate">{user.name}</p>
@@ -158,19 +173,22 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                 <header className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            {subView === 'home' && `Welcome back, ${user.name.split(' ')[0]} ! 👋`}
+                            {subView === 'home' && `Welcome back, ${user.name ? user.name.split(' ')[0] : 'Employee'}! 👋`}
                             {subView === 'profile' && 'Profile Management'}
                             {subView === 'attendance' && 'Attendance Tracker'}
+                            {subView === 'leave' && 'Leave Management'}
+                            {subView === 'payroll' && 'Payroll Information'}
                         </h1>
                     </div>
 
                     {/* QUICK CHECK-IN BUTTON IN HEADER */}
                     <button
                         onClick={handleCheckInToggle}
-                        className={`flex items - center gap - 2 px - 4 py - 2 rounded - lg font - bold transition - all shadow - sm border ${attendanceStatus === 'Present'
-                            ? 'bg-red-50 text-red-600 border-red-100'
-                            : 'bg-green-50 text-green-600 border-green-100'
-                            } `}
+                        // FIXED: Removed extra spaces in class string
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all shadow-sm border ${attendanceStatus === 'Present'
+                            ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
+                            : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'
+                            }`}
                     >
                         {attendanceStatus === 'Present' ? <LogOut size={18} /> : <CheckCircle size={18} />}
                         {attendanceStatus === 'Present' ? 'Check Out' : 'Check In'}
@@ -181,10 +199,9 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                     {subView === 'home' && (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                {/* Value now reflects the dynamic state */}
                                 <StatCard
                                     title="Today's Status"
-                                    value={attendanceStatus === 'Present' ? `Present(${checkInTime})` : 'Not Marked'}
+                                    value={attendanceStatus === 'Present' ? 'Present' : 'Not Marked'}
                                     icon={CheckCircle}
                                     color={attendanceStatus === 'Present' ? "bg-green-500 text-green-500" : "bg-gray-400 text-gray-400"}
                                 />
@@ -192,36 +209,37 @@ const EmployeeDashboard: React.FC<DashboardProps> = ({ user, onLogout, subView, 
                                 <StatCard title="Leave Balance" value="12 Days" icon={Calendar} color="bg-blue-500 text-blue-500" />
                             </div>
 
-                            {/* RECENT ACTIVITY [Requirement 3.2.1] */}
                             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                                 <h3 className="font-bold text-gray-800 mb-4">Recent Activity</h3>
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-4 text-sm text-gray-600 border-b border-gray-50 pb-3">
-                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                        <span>You marked yourself as <b>Present</b> at 09:00 AM today.</span>
-                                    </div>
+                                    {checkInTime && (
+                                        <div className="flex items-center gap-4 text-sm text-gray-600 border-b border-gray-50 pb-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                            <span>You checked in at <b>{checkInTime}</b> today.</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-4 text-sm text-gray-600">
                                         <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                        <span>Your profile was updated by <b>Admin</b> yesterday.</span>
+                                        <span>System welcome message.</span>
                                     </div>
                                 </div>
                             </div>
                         </>
                     )}
 
-                    {subView === 'profile' && <ProfileView userRole={user.role} userId={user._id || user.id} />}
+                    {subView === 'profile' && <ProfileView userRole={user.role} userId={user._id || ''} />}
 
                     {subView === 'attendance' && (
                         <AttendanceTracker
                             isCheckedIn={attendanceStatus === 'Present'}
                             checkInTime={checkInTime}
                             onToggle={handleCheckInToggle}
-                            userId={user._id || user.id}
+                            userId={user._id || ''}
                         />
                     )}
 
-                    {subView === 'leave' && <LeaveApplication userId={user._id || user.id} />}
-                    {subView === 'payroll' && <PayrollView userId={user._id || user.id} />}
+                    {subView === 'leave' && <LeaveApplication userId={user._id || ''} />}
+                    {subView === 'payroll' && <PayrollView userId={user._id || ''} />}
                 </div>
             </main>
         </div>

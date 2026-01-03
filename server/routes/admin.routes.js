@@ -32,7 +32,12 @@ router.post('/add-employee', async (req, res) => {
 
         res.status(201).json({ message: "Employee Created Successfully", profile: newProfile });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error("Add Employee Error:", error);
+        // Check for specific Mongo errors
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Email or Employee ID already exists" });
+        }
+        res.status(400).json({ message: error.message || "Failed to create employee" });
     }
 });
 

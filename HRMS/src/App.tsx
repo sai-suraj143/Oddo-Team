@@ -46,7 +46,7 @@ const App: React.FC = () => {
       {view === 'login' ? (
         <LoginForm onLogin={handleLogin} onSwitchToSignup={() => setView('signup')} />
       ) : (
-        <SignupForm onSwitchToLogin={() => setView('login')} />
+        <SignupForm onSwitchToLogin={() => setView('login')} onSignupSuccess={() => setView('login')} />
       )}
     </AuthLayout>
   );

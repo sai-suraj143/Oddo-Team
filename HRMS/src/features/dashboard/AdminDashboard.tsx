@@ -34,7 +34,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     // --- ADD EMPLOYEE LOGIC ---
     const [showAddModal, setShowAddModal] = useState(false);
     const [empData, setEmpData] = useState({
-        name: '', email: '', role: 'Employee', department: '', designation: '', salary: ''
+        name: '', email: '', role: 'Employee', department: '', designation: '', salary: '0'
     });
 
     const handleAddEmployee = async (e: React.FormEvent) => {
@@ -48,17 +48,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             if (res.ok) {
                 alert("Employee added successfully!");
                 setShowAddModal(false);
-                setEmpData({ name: '', email: '', role: 'Employee', department: '', designation: '', salary: '' });
-                // Note: ideally we should trigger a refresh of EmployeeList here, 
-                // but since these are separate components, a simple way is to reload or use context. 
-                // For now, simple reload works or user navigates back and forth.
+                setEmpData({ name: '', email: '', role: 'Employee', department: '', designation: '', salary: '0' });
+
                 if (adminView === 'users') {
-                    // Force refresh trick or just let user re-navigate
-                    setAdminView('attendance'); // toggle
+                    setAdminView('attendance');
                     setTimeout(() => setAdminView('users'), 50);
                 }
             } else {
-                alert("Failed to add employee");
+                const data = await res.json();
+                alert(`Failed to add employee: ${data.message || 'Unknown error'}`);
             }
         } catch (err) {
             console.error("Error adding employee", err);
