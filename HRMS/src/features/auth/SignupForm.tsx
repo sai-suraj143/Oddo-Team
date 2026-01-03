@@ -3,7 +3,7 @@ import { User, Mail, Lock, Briefcase, CheckCircle, Copy, ArrowRight } from 'luci
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
-import { PASSWORD_REGEX, generateEmployeeId } from '../../utils/constants';
+import { PASSWORD_REGEX } from '../../utils/constants';
 
 interface SignupFormProps {
     onSignupSuccess: () => void;
@@ -33,22 +33,38 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
 
         setLoading(true);
 
-        // Simulate API delay
-        setTimeout(() => {
-            // 1. Generate ID using the function from constants.ts
-            const newId = generateEmployeeId(formData.name);
-            setGeneratedId(newId);
+        try {
+            const response = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setErrors({ ...errors, form: data.message || "Registration failed" });
+                setLoading(false);
+                return;
+            }
+
+            // 1. Get ID from Backend Response
+            setGeneratedId(data.empId);
 
             // 2. Move to Success Screen
             setLoading(false);
             setStep(2);
-        }, 1500);
+
+        } catch (err) {
+            setErrors({ ...errors, form: "Network error. Please try again." });
+            setLoading(false);
+        }
     };
 
     const handleCopyId = () => {

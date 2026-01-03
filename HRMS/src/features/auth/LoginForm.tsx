@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
-import { MOCK_DB_USERS } from '../../utils/constants';
 import type { UserType } from '../../utils/constants';
+
 
 interface LoginFormProps {
     onLogin: (user: UserType) => void;
@@ -16,23 +16,31 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onSwitchToSignup }) => {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
         setLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            // Find user by Employee ID instead of Email
-            const user = MOCK_DB_USERS.find(u => u.id === formData.empId && u.password === formData.password);
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
 
-            if (user) {
-                onLogin(user);
+            const data = await response.json();
+
+            if (response.ok) {
+                onLogin(data.user);
             } else {
-                setErrors({ form: 'Invalid Employee ID or password. Please try again.' });
+                setErrors({ form: data.message || 'Invalid Employee ID or password.' });
                 setLoading(false);
             }
-        }, 1000);
+
+        } catch (err) {
+            setErrors({ form: "Network error. Please check your connection." });
+            setLoading(false);
+        }
     };
 
     return (

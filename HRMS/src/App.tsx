@@ -6,24 +6,36 @@ import AdminDashboard from './features/dashboard/AdminDashboard';
 import EmployeeDashboard from './features/dashboard/EmployeeDashboard';
 import type { UserType } from './utils/constants';
 
+// Define the available sub-views for your features
+export type SubViewType = 'home' | 'profile' | 'attendance';
+
 const App: React.FC = () => {
   const [view, setView] = useState<'login' | 'signup' | 'dashboard'>('login');
+  const [subView, setSubView] = useState<SubViewType>('home');
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
   const handleLogin = (user: UserType) => {
     setCurrentUser(user);
     setView('dashboard');
+    setSubView('home'); // Reset to dashboard home on login
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setView('login');
+    setSubView('home');
   };
 
   if (view === 'dashboard' && currentUser) {
+    // Note: You can apply the same subView logic to AdminDashboard if needed
     return currentUser.role === 'HR'
       ? <AdminDashboard user={currentUser} onLogout={handleLogout} />
-      : <EmployeeDashboard user={currentUser} onLogout={handleLogout} />;
+      : <EmployeeDashboard
+        user={currentUser}
+        onLogout={handleLogout}
+        subView={subView}
+        setSubView={setSubView}
+      />;
   }
 
   return (
@@ -39,4 +51,5 @@ const App: React.FC = () => {
     </AuthLayout>
   );
 };
+
 export default App;
