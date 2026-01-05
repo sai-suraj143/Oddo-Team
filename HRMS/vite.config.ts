@@ -6,7 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:5000'
+      '/api': {
+        target: 'https://oddo-team.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      }
     }
   }
 })
